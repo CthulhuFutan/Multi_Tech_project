@@ -1,0 +1,12 @@
+{
+  "platform": "Windows-11-10.0.26200-SP0",
+  "python": "3.12.8",
+  "opencv": "5.0.0",
+  "numpy": "1.26.4",
+  "torch": "2.5.1",
+  "ffmpeg": "ffmpeg version 8.0.1-essentials_build-www.gyan.dev Copyright (c) 2000-2025 the FFmpeg developers",
+  "ffprobe": "ffprobe version 8.0.1-essentials_build-www.gyan.dev Copyright (c) 2007-2025 the FFmpeg developers",
+  "threads": 12,
+  "cache_policy": "read source each attempt; no cache",
+  "dataset": "C:\\Users\\25826\\Desktop\\\u5b66\u6821\u4fe1\u606f\\\u6e2f\u57ce\u839e\\\u8bfe\u4ef6\\CS5185-Multi-Tech and Applications\\Group Project\\CS5185_Project_Video_Dataset"
+}

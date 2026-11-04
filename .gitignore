@@ -1,0 +1,6 @@
+__pycache__/
+.venv/
+vendor/
+results/*.mp4
+results/*_pass*
+*.log

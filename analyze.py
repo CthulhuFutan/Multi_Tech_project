@@ -12,7 +12,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parent
 RESULTS = ROOT / "results"
-OUT = ROOT / "Analysis.md"
+OUT = ROOT / "analysis.md"
 
 
 def load():
@@ -83,35 +83,41 @@ def report(rows, plots):
     for r in rows:
         pairs.setdefault((r["video_id"], r["ratio"]), {})[r["mode"]] = r
     complete = [(k, v) for k, v in pairs.items() if len(v) == 2]
-    lines = ["# CS5185 实验结果与 PPT 分析素材", "", "本报告从 `results/` 中实际编码与评估日志自动生成。图像为同时间戳画面，质量指标基于 Y 通道。", "",
-             "## 汇总", "", f"已完成 {len(rows)} 个编码任务，{len(complete)} 组基线/自适应配对；目标为 12 视频 × 2 档 × 2 模式，共 48 个编码任务。", "",
-             "| 视频 | 目标 | 基线大小/目标 | 自适应大小/目标 | ΔPSNR (dB) | ΔMS-SSIM | 自适应决策 |", "|---|---:|---:|---:|---:|---:|---|"]
+    lines = ["# CS5185 Experiment: Results and Analysis", "",
+             "This report is generated from the actual encoding logs in `results/`. It answers what the project required, what was implemented, how it performed, and where the approach falls short.", "",
+             "## Task and implementation", "",
+             "The task was to encode all 12 silent 1280×720 videos at 5% and 2% of each original file size using FFmpeg/libx264, preserve the full clip, and explain content-dependent parameter choices against a unified baseline. We completed 48 runs: 12 videos × 2 budgets × baseline/adaptive. Final playable MP4 files are grouped under `result/5_percent/` and `result/2_percent/`.", "",
+             "The pipeline reads metadata, computes an exact byte budget, measures frame difference and edge density, selects AQ settings, performs two-pass x264 encoding, checks output size and decoding, retries over-budget results up to three attempts, and records PSNR(Y), MS-SSIM(Y), time, parameters, and hashes. The baseline fixes preset=medium, AQ mode=1, strength=1.0. The adaptive variant changes only AQ mode/strength according to measured features; both use the same bitrate budget and other encoder settings.", "",
+             "## Complete paired results", "",
+             "Size columns show actual MP4 bytes as a percentage of the exact target. Positive metric differences favor adaptive encoding. Near-zero values should not be presented as meaningful wins without viewing the frames.", "",
+             "| Video | Budget | Baseline size / target | Adaptive size / target | ΔPSNR Y (dB) | ΔMS-SSIM Y | Adaptive AQ |", "|---|---:|---:|---:|---:|---:|---|"]
     for (vid, ratio), p in complete:
         b, a = p["baseline"], p["adaptive"]
-        lines.append(f"| {vid} | {ratio:.0%} | {b['actual_bytes']/b['target_bytes']:.2%} | {a['actual_bytes']/a['target_bytes']:.2%} | {a['psnr_y_db']-b['psnr_y_db']:+.2f} | {a['ms_ssim_y']-b['ms_ssim_y']:+.4f} | AQ {a['settings']['aq_mode']}, strength {a['settings']['aq_strength']} |")
+        lines.append(f"| {vid} | {ratio:.0%} | {b['actual_bytes']/b['target_bytes']:.2%} | {a['actual_bytes']/a['target_bytes']:.2%} | {a['psnr_y_db']-b['psnr_y_db']:+.2f} | {a['ms_ssim_y']-b['ms_ssim_y']:+.4f} | mode {a['settings']['aq_mode']}, strength {a['settings']['aq_strength']} |")
     valid = [r for r in rows if r["decode_ok"]]
     budget = [r for r in rows if r["within_budget"]]
     changed = [(k,p) for k,p in complete if p["adaptive"]["settings"] != p["baseline"]["settings"]]
     wins = sum(p["adaptive"]["psnr_y_db"] > p["baseline"]["psnr_y_db"] for _,p in changed)
-    lines += ["", "## 适合 PPT 的结论", "",
-              f"1. 完整性：{len(valid)}/{len(rows)} 个已完成输出通过解码、时长、帧数、分辨率和帧率检查；{len(budget)}/{len(rows)} 个输出在精确字节预算内。",
-              f"2. 内容决策：在 {len(changed)} 组参数真正改变的配对中，自适应方案的 Y-PSNR 提高了 {wins} 组；这说明规则并非对所有内容都有同样收益，应结合画面对照解释。",
-              "3. 大小控制：两方案使用相同目标字节、两遍编码和反馈公式；文件大小图中的 100% 虚线就是硬预算。PSNR 与 MS-SSIM 请与该图一起看，避免把更大的文件误判为纯粹的编码优势。",
-              "4. 耗时：总时间包含 metadata、特征分析、所有编码轮次、解码检查、质量评估和日志写入；运行时间图可说明自适应决策的实际成本。", "",
-              "## 三个可讲的具体案例", "",
-              "- **09_Parkrun（保留测试集）**：5% 档的 ΔPSNR 为 -0.26 dB、ΔMS-SSIM 为 +0.0011；2% 档分别为 -0.20 dB、+0.0028。规则选择 AQ mode 2 / strength 0.8。可把 2% 三栏画面与特征曲线并排讲，说明结构指标改善与像素误差指标并不总一致。该案例不能声称全面画质提升。",
-              "- **05_Jockey（保留测试集）**：两档 PSNR 均约 +0.18 dB，但 MS-SSIM 略降。适合解释快速变化内容触发低 AQ strength 后的指标取舍，并在原片与压缩结果的同帧局部放大图中核对主观观感。",
-              "- **11_Sintel（补充样例）**：5% 与 2% 档 PSNR 分别约 +0.63、+0.61 dB；2% 档 MS-SSIM 也约 +0.0004。可作确有收益的补充例，但该视频不在指定保留测试集，汇报时必须标明。",
-              "- **02_Beauty（回退案例）**：特征未触发参数切换，两组结果完全相同。它证明规则有明确回退行为，也提醒展示时不要把相同输出计入自适应增益。", "",
-              "推荐 PPT 主线：流程图 → `09_Parkrun_features.png` 决策曲线 → `size_budget.png` → `quality_psnr.png` 与 `quality_msssim.png` → `compare_09_Parkrun_2pct.png` → 局限。三视频六档汇总可从表格选 `01_FourPeople`、`06_ShakeNDry`、`09_Parkrun`。", "",
-              "## 图表", ""]
+    attempts = [r["attempts"] for r in rows]
+    lines += ["", "## Outcomes", "",
+              f"- **Size and integrity:** {len(budget)}/{len(rows)} final MP4 files meet their exact byte budgets; {len(valid)}/{len(rows)} pass decoding and checks for duration, frame count, dimensions, and frame rate. {sum(n > 1 for n in attempts)} runs required a second or third encoding attempt; the maximum observed was {max(attempts)}.",
+              f"- **Quality:** Adaptive AQ differs from baseline in {len(changed)} paired cases. Its luma PSNR improves in {wins}/{len(changed)} of those cases. The rule therefore does not deliver a general PSNR gain. MS-SSIM and PSNR sometimes move in opposite directions, so neither alone establishes a subjective quality improvement.",
+              "- **Fairness:** Both variants use the same target bytes, two-pass rate control, preset, resolution, frame rate, and pixel format. Small differences in actual bytes remain and should be considered when interpreting quality differences.",
+              "- **Runtime:** `runtime.png` shows total pipeline time, including all attempts and quality evaluation. Exact values for each run are in `results/summary.csv`.", "",
+              "## Cases for a five-minute presentation", "",
+              "- **Parkrun (held-out test set):** At 5%, adaptive PSNR changes by −0.26 dB and MS-SSIM by +0.0011; at 2%, by −0.20 dB and +0.0028. The motion rule selects AQ mode 2, strength 0.8. Use the 2% three-way frame comparison and feature timeline to explain why the two metrics disagree. Do not call this an unqualified quality win.",
+              "- **Jockey (held-out test set):** PSNR rises by about 0.18 dB at both budgets, while MS-SSIM falls slightly. This is another metric tradeoff under the same motion-sensitive setting.",
+              "- **Sintel (additional video):** PSNR rises by about 0.63 dB at 5% and 0.61 dB at 2%; 2% MS-SSIM rises by about 0.0004. Mark this as an additional sample rather than a held-out test case.",
+              "- **Beauty (fallback):** The rule keeps the baseline AQ settings, yielding identical outputs. It shows a defined fallback, not an adaptive quality gain.", "",
+              "Suggested slide sequence: task and workflow; Parkrun feature timeline and selected parameters; size budget chart; PSNR/MS-SSIM comparison; aligned frame comparison; conclusions and limitations. Use FourPeople, ShakeNDry, and Parkrun for a three-video, two-budget summary.", "",
+              "## Figures", ""]
     for name in plots:
         lines.append(f"![{name}]({name})")
         lines.append("")
-    lines += ["## 方法和局限", "",
-              "基线固定 preset=medium、AQ mode=1、strength=1.0；自适应只根据帧差 P90 和平均边缘比例选择 AQ。两方案均用 libx264 双遍平均码率，目标字节相同。规则阈值为预设启发式，不能保证每个视频都优于基线。",
-              "PSNR(Y) 对全部对应帧累计平方误差后计算；MS-SSIM(Y) 使用 pytorch-msssim 1.0.0、data_range=255、默认 5 个尺度，在每 30 帧取一帧并作算术平均。整片其余帧仍参与 PSNR 与完整性检查。",
-              "报告中显示的实验时间与数值仅对当前硬件和环境有效。每条任务的输入/输出 SHA-256、FFmpeg 命令、逐轮决策、失败信息与精确数值见 `results/*.json`。", ""]
+    lines += ["## Limitations and measurement details", "",
+              "The two-feature AQ rule is deliberately small and interpretable, but its fixed thresholds were not optimized systematically. It does not adapt within a clip, model camera motion or noise separately, or search candidate settings for best measured quality. The weak PSNR win rate is evidence that this rule needs refinement, not evidence that adaptive encoding as a whole is ineffective.",
+              "PSNR(Y) aggregates squared error over every corresponding pixel and frame before converting to dB. MS-SSIM(Y) uses pytorch-msssim 1.0.0, data_range=255, five default scales, one frame per 30 frames, and an arithmetic mean over sampled frames. It is not a full-frame temporal MS-SSIM average. Representative still frames support visual inspection but cannot establish motion smoothness; viewers should also play the final MP4 files.",
+              "The figures are descriptive, not a blinded human preference study. Runtime values depend on this machine and its software environment. Full-precision measurements, hashes, FFmpeg commands, selected attempts, and feature summaries are in `results/*.json`; input attribution is in the dataset's `licenses/` directory.", ""]
     OUT.write_text("\n".join(lines), encoding="utf-8")
 
 

@@ -179,7 +179,10 @@ def run_one(args, source: Path, ratio: float, mode: str, result_dir: Path) -> di
         bitrate = max(1, math.floor(bitrate * budget / actual * .98))
     if chosen is None:
         raise RuntimeError(f"No valid candidate: {label}")
-    final = result_dir / f"{label}.mp4"
+    category = "5_percent" if ratio == .05 else "2_percent" if ratio == .02 else f"{ratio:g}_ratio"
+    final_dir = args.output / category
+    final_dir.mkdir(parents=True, exist_ok=True)
+    final = final_dir / f"{label}.mp4"
     shutil.copy2(chosen["path"], final)
     psnr, msssim, count = quality(source, final)
     packet_info = json.loads(command([args.ffprobe, "-v", "error", "-select_streams", "v:0", "-show_entries", "packet=size", "-of", "json", str(final)]).stdout)
@@ -201,6 +204,7 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument("--dataset", type=Path, default=DATASET)
     p.add_argument("--results", type=Path, default=ROOT / "results")
+    p.add_argument("--output", type=Path, default=ROOT / "result", help="Final videos, grouped by target ratio")
     p.add_argument("--ffmpeg", default="ffmpeg")
     p.add_argument("--ffprobe", default="ffprobe")
     p.add_argument("--videos", nargs="*", help="Optional video IDs, e.g. 01 06")

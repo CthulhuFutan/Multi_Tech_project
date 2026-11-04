@@ -3,4 +3,7 @@ __pycache__/
 vendor/
 results/*.mp4
 results/*_pass*
+result/*.mp4
+result/**/*.mp4
+.idea/
 *.log

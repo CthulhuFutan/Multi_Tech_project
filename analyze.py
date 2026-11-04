@@ -12,7 +12,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parent
 RESULTS = ROOT / "results"
-OUT = ROOT / "analysis.md"
+OUT = ROOT / "analysis_en.md"
 
 
 def load():

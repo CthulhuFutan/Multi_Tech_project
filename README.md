@@ -15,7 +15,7 @@ python analyze.py
 
 Use `--videos 01 06 09`, `--ratios 0.05`, or `--modes baseline` for smaller runs. To reproduce the current machine's run, set `PYTHONPATH` to `vendor` when packages are installed there. The local Conda environment requires `KMP_DUPLICATE_LIB_OK=TRUE` due to duplicate OpenMP runtimes; a clean virtual environment is recommended for independent reproduction.
 
-`results/summary.csv` contains one row per task. Detailed JSON includes exact bytes, hashes, all FFmpeg commands, selected attempt, feature summary, timing, quality and integrity. `analysis.md` and PNGs are generated from those logs. Final MP4 files are in `result/5_percent/` and `result/2_percent/`. Videos are excluded from Git because of their size. No GitHub remote or push is performed here.
+`results/summary.csv` contains one row per task. Detailed JSON includes exact bytes, hashes, all FFmpeg commands, selected attempt, feature summary, timing, quality and integrity. `analysis.md` is the Chinese presentation reference. `analyze.py` regenerates the figures and `analysis_en.md` without overwriting it. Final MP4 files are in `result/5_percent/` and `result/2_percent/`. Videos are excluded from Git because of their size. No GitHub remote or push is performed here.
 
 ## Design notes
 
